@@ -23,7 +23,7 @@ public class ProducerDemo {
         KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
         // create a producer record (String producer)
-        ProducerRecord<String, String> record =  new ProducerRecord<>("first_topic", "hello world");
+        ProducerRecord<String, String> record =  new ProducerRecord<>("new_topic", "hello world");
 
         // send data - asynchronous
         producer.send(record);
@@ -33,5 +33,7 @@ public class ProducerDemo {
 
         // flush and close producer
         producer.close();
+
+        // kafka-console-consumer.sh --bootstrap-server 127.0.0.1:9092 --topic new_topic --group my-java-app
     }
 }

@@ -1,6 +1,8 @@
 package kafka.tutorial1;
 
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,54 +25,44 @@ public class ProducerDemoKeys {
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
         // create the producer
-        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
+        KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
-
-        for (int i=0; i<10; i++ ) {
+        for (int i = 0; i < 10; i++) {
             // create a producer record
+            ProducerRecord<String, String> record;
+            {
+                String topic = "new_topic";
+                String value = String.format("hello world %d", i);
+                String key = String.format("id_%d", i); // giving a key we make sure that value goes to a partition
 
-            String topic = "first_topic";
-            String value = "hello world " + Integer.toString(i);
-            String key = "id_" + Integer.toString(i);
+                record = new ProducerRecord<>(topic, key, value);
 
-            ProducerRecord<String, String> record =
-                    new ProducerRecord<String, String>(topic, key, value);
-
-            logger.info("Key: " + key); // log the key
-            // id_0 is going to partition 1
-            // id_1 partition 0
-            // id_2 partition 2
-            // id_3 partition 0
-            // id_4 partition 2
-            // id_5 partition 2
-            // id_6 partition 0
-            // id_7 partition 2
-            // id_8 partition 1
-            // id_9 partition 2
-
-
-            // send data - asynchronous
-            producer.send(record, new Callback() {
-                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                    // executes every time a record is successfully sent or an exception is thrown
-                    if (e == null) {
-                        // the record was successfully sent
-                        logger.info("Received new metadata. \n" +
-                                "Topic:" + recordMetadata.topic() + "\n" +
-                                "Partition: " + recordMetadata.partition() + "\n" +
-                                "Offset: " + recordMetadata.offset() + "\n" +
-                                "Timestamp: " + recordMetadata.timestamp());
-                    } else {
-                        logger.error("Error while producing", e);
-                    }
+                logger.info("Key: " + key); // log the key
+            }
+            // send with callback
+            producer.send(record, (recordMetadata, exception) -> {
+                // executes every time a record is successfully sent or an exception is thrown
+                if (exception == null) {
+                    // the record was successfully sent
+                    logger.info("Received new metadata. \n" +
+                                    "Topic:{}\n" +
+                                    "Partition: {}\n" +
+                                    "Offset: {}\n" +
+                                    "Timestamp: {}",
+                            recordMetadata.topic(),
+                            recordMetadata.partition(),
+                            recordMetadata.offset(),
+                            recordMetadata.timestamp());
+                } else {
+                    logger.error("Error while producing", exception);
                 }
             }).get(); // block the .send() to make it synchronous - don't do this in production!
         }
-
         // flush data
         producer.flush();
         // flush and close producer
         producer.close();
 
+        // kafka-console-consumer.sh --bootstrap-server 127.0.0.1:9092 --topic new_topic --group my-java-app
     }
 }

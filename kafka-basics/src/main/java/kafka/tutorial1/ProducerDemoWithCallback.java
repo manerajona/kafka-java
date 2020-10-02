@@ -1,11 +1,14 @@
 package kafka.tutorial1;
 
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.stream.IntStream;
 
 public class ProducerDemoWithCallback {
 
@@ -22,36 +25,39 @@ public class ProducerDemoWithCallback {
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
         // create the producer
-        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
+        KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
 
-        for (int i=0; i<10; i++ ) {
-            // create a producer record
-            ProducerRecord<String, String> record =
-                    new ProducerRecord<String, String>("first_topic", "hello world " + Integer.toString(i));
+        IntStream.rangeClosed(0, 10).forEach(i -> {
+                    // create a producer record
+                    ProducerRecord<String, String> record =
+                            new ProducerRecord<>("new_topic", String.format("hello world %d", i));
 
-            // send data - asynchronous
-            producer.send(record, new Callback() {
-                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                    // executes every time a record is successfully sent or an exception is thrown
-                    if (e == null) {
-                        // the record was successfully sent
-                        logger.info("Received new metadata. \n" +
-                                "Topic:" + recordMetadata.topic() + "\n" +
-                                "Partition: " + recordMetadata.partition() + "\n" +
-                                "Offset: " + recordMetadata.offset() + "\n" +
-                                "Timestamp: " + recordMetadata.timestamp());
-                    } else {
-                        logger.error("Error while producing", e);
-                    }
+                    // send with callback
+                    producer.send(record, (recordMetadata, exception) -> {
+                        // executes every time a record is successfully sent or an exception is thrown
+                        if (exception == null) {
+                            // the record was successfully sent
+                            logger.info("Received new metadata. \n" +
+                                            "Topic:{}\n" +
+                                            "Partition: {}\n" +
+                                            "Offset: {}\n" +
+                                            "Timestamp: {}",
+                                    recordMetadata.topic(),
+                                    recordMetadata.partition(),
+                                    recordMetadata.offset(),
+                                    recordMetadata.timestamp());
+                        } else {
+                            logger.error("Error while producing", exception);
+                        }
+                    });
                 }
-            });
-        }
-
+        );
         // flush data
         producer.flush();
         // flush and close producer
         producer.close();
 
+        // kafka-console-consumer.sh --bootstrap-server 127.0.0.1:9092 --topic new_topic --group my-java-app
     }
 }
