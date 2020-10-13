@@ -41,7 +41,7 @@ public class StreamsFilterTweets {
         kafkaStreams.start();
     }
 
-    private static JsonParser jsonParser = new JsonParser();
+    private static final JsonParser jsonParser = new JsonParser();
 
     private static Integer extractUserFollowersInTweet(String tweetJson){
         // gson library
